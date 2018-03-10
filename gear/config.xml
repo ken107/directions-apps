@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns:tizen="http://tizen.org/ns/widgets" xmlns="http://www.w3.org/ns/widgets" id="http://lsdsoftware.com/directions-gear-app" version="1.0.0" viewmodes="maximized">
+    <access origin="https://maps.googleapis.com" subdomains="false"></access>
+    <tizen:application id="QPZgM3EZ38.Directions" package="QPZgM3EZ38" required_version="2.3.2"/>
+    <content src="index.html"/>
+    <tizen:content-security-policy>script-src 'self' 'unsafe-eval'</tizen:content-security-policy>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <icon src="icon.png"/>
+    <name>Directions</name>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/location"/>
+    <tizen:profile name="wearable"/>
+    <tizen:setting background-support="disable" encryption="disable" hwkey-event="enable"/>
+</widget>

@@ -1,0 +1,64 @@
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    padding: 0;
+    background-color: black;
+    color: white;
+    font-family: Verdana, Lucida Sans, Arial, Helvetica, sans-serif;
+}
+
+template {
+	display: none;
+}
+
+.layout {
+	width: 100%;
+	height: 100%;
+}
+
+.loading {
+	font-weight: bold;
+	font-size: 2rem;
+}
+
+.search-form {
+	margin-top: 1rem;
+}
+
+.place-index {
+	font-size: 1.5rem;
+	margin-bottom: 1rem;
+}
+.place-name {
+	font-weight: bold;
+	font-size: 2rem;
+}
+.place-vicinity {
+	font-size: 1.3rem;
+}
+.place-distance {
+	margin-top: 1rem;
+	font-size: 1.5rem;
+}
+
+.dir-index {
+	display: inline-block;
+	width: 2rem;
+	text-align: center;
+	line-height: 2rem;
+	background-color: white;
+	color: black;
+	font-weight: bold;
+	font-size: 1.5rem;
+	border-radius: 1rem;
+	margin-bottom: 1rem;
+}
+.dir-instruction {
+	font-size: 1.5rem;
+}
+.dir-distance {
+	margin-top: 1rem;
+	font-size: 1.5rem;
+}

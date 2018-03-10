@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "browserify": "browserify js/main.js -t [ babelify --presets [ env ] ] -o js/bundle.js"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babelify": "^8.0.0",
+    "databind": "0.0.5",
+    "geolib": "^2.0.24"
+  }
+}
