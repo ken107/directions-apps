@@ -13,6 +13,10 @@ template {
 	display: none;
 }
 
+input {
+	font-size: 1.2rem;
+}
+
 .layout {
 	width: 100%;
 	height: 100%;
@@ -23,6 +27,13 @@ template {
 	font-size: 2rem;
 }
 
+.last-location {
+	font-size: 1.2rem;
+	color: gray;
+}
+.current-location {
+	font-size: 1.2rem;
+}
 .search-form {
 	margin-top: 1rem;
 }
@@ -41,6 +52,12 @@ template {
 .place-distance {
 	margin-top: 1rem;
 	font-size: 1.5rem;
+}
+.place-bearing {
+	margin-top: 1rem;
+}
+.place-bearing > img {
+	width: 40px;
 }
 
 .dir-index {

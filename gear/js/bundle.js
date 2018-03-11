@@ -18,8 +18,11 @@ var App = function () {
 		document.addEventListener("tizenhwkey", this.onKey.bind(this));
 		document.addEventListener("rotarydetent", this.onRotate.bind(this));
 
-		this.state = "LOCATE";
+		this.state = "LOCATING";
 		this.location = null;
+		this.lastLocation = null;
+		this.bearing = null;
+		this.compassDirection = null;
 		this.searchResult = null;
 		this.directionsResult = null;
 		this.locate();
@@ -47,9 +50,6 @@ var App = function () {
 				case "SEARCHING":
 					this.state = "SEARCH";
 					break;
-				case "SEARCH":
-					this.state = "LOCATE";
-					break;
 				default:
 					tizen.application.getCurrentApplication().exit();
 			}
@@ -69,20 +69,24 @@ var App = function () {
 		key: "locate",
 		value: function locate() {
 			navigator.geolocation.getCurrentPosition(this.onLocation.bind(this));
-			this.state = "LOCATING";
 		}
 	}, {
 		key: "onLocation",
 		value: function onLocation(result) {
-			this.location = result;
-			this.state = "SEARCH";
+			this.lastLocation = this.location;
+			this.location = { latitude: result.coords.latitude, longitude: result.coords.longitude };
+			if (this.lastLocation) {
+				this.bearing = geolib.getBearing(this.lastLocation, this.location);
+				this.compassDirection = geolib.getCompassDirection(this.lastLocation, this.location).exact;
+			}
+			if (this.state == "LOCATING") this.state = "SEARCH";
 		}
 	}, {
 		key: "search",
 		value: function search(query) {
 			var opts = {
 				key: config.googleApiKey,
-				location: this.location.coords.latitude + "," + this.location.coords.longitude,
+				location: this.location.latitude + "," + this.location.longitude,
 				rankby: "distance",
 				keyword: query
 			};
@@ -94,19 +98,33 @@ var App = function () {
 		value: function onSearchResult(text) {
 			var _this = this;
 
+			var parse = function parse(item) {
+				return {
+					name: item.name,
+					location: { latitude: item.geometry.location.lat, longitude: item.geometry.location.lng },
+					vicinity: item.vicinity,
+					distance: _this.printDistance(geolib.getDistance(_this.location, item.geometry.location)),
+					bearing: geolib.getBearing(_this.location, item.geometry.location),
+					direction: geolib.getCompassDirection(_this.location, item.geometry.location).exact
+				};
+			};
 			this.searchResult = {
-				items: JSON.parse(text).results.map(function (item) {
-					return {
-						name: item.name,
-						location: { latitude: item.geometry.location.lat, longitude: item.geometry.location.lng },
-						vicinity: item.vicinity,
-						distance: _this.printDistance(geolib.getDistance(_this.location.coords, item.geometry.location)),
-						direction: _this.printDirection(geolib.getCompassDirection(_this.location.coords, item.geometry.location))
-					};
-				}),
+				items: JSON.parse(text).results.map(parse),
 				index: 0
 			};
+			if (this.bearing != null) this.searchResult.items.sort(this.sortByBearing.bind(this));
 			this.state = "SEARCH_RESULT";
+		}
+	}, {
+		key: "sortByBearing",
+		value: function sortByBearing(a, b) {
+			var alpha = Math.abs(a.bearing - this.bearing);
+			var beta = Math.abs(b.bearing - this.bearing);
+			if (alpha > 180) alpha = 360 - alpha;
+			if (beta > 180) beta = 360 - beta;
+			if (alpha < beta) return -1;
+			if (alpha > beta) return 1;
+			return 0;
 		}
 	}, {
 		key: "select",
@@ -114,7 +132,7 @@ var App = function () {
 			var dest = this.searchResult.items[this.searchResult.index].location;
 			var opts = {
 				key: config.googleApiKey,
-				origin: this.location.coords.latitude + "," + this.location.coords.longitude,
+				origin: this.location.latitude + "," + this.location.longitude,
 				destination: dest.latitude + "," + dest.longitude
 			};
 			ajaxGet("https://maps.googleapis.com/maps/api/directions/json", opts, this.onDirectionsResult.bind(this));
@@ -140,9 +158,19 @@ var App = function () {
 			return (d / 1000 * 5 / 8).toFixed(2) + ' mi';
 		}
 	}, {
-		key: "printDirection",
-		value: function printDirection(d) {
-			return d.exact;
+		key: "printCoords",
+		value: function printCoords(coords) {
+			if (!coords) return '';
+			return Number(coords.latitude).toFixed(6) + ',' + Number(coords.longitude).toFixed(6);
+		}
+	}, {
+		key: "setArrowRotation",
+		value: function setArrowRotation(elem, myBearing, myLocation, destination) {
+			if (myBearing != null && myLocation && destination) {
+				var placeBearing = geolib.getBearing(myLocation, destination);
+				var angle = placeBearing - myBearing;
+				elem.style.transform = "rotate(" + angle + "deg)";
+			}
 		}
 	}]);
 

@@ -8,8 +8,11 @@ class App {
 		document.addEventListener("tizenhwkey", this.onKey.bind(this));
 		document.addEventListener("rotarydetent", this.onRotate.bind(this));
 		
-		this.state = "LOCATE";
+		this.state = "LOCATING";
 		this.location = null;
+		this.lastLocation = null;
+		this.bearing = null;
+		this.compassDirection = null;
 		this.searchResult = null;
 		this.directionsResult = null;
 		this.locate();
@@ -33,9 +36,6 @@ class App {
 			case "SEARCHING":
 				this.state = "SEARCH";
 				break;
-			case "SEARCH":
-				this.state = "LOCATE";
-				break;
 			default:
 				tizen.application.getCurrentApplication().exit();
 		}
@@ -54,18 +54,22 @@ class App {
 
 	locate() {
 		navigator.geolocation.getCurrentPosition(this.onLocation.bind(this));
-		this.state = "LOCATING";
 	}
 
 	onLocation(result) {
-		this.location = result;
-		this.state = "SEARCH";
+		this.lastLocation = this.location;
+		this.location = {latitude: result.coords.latitude, longitude: result.coords.longitude};
+		if (this.lastLocation) {
+			this.bearing = geolib.getBearing(this.lastLocation, this.location);
+			this.compassDirection = geolib.getCompassDirection(this.lastLocation, this.location).exact;
+		}
+		if (this.state == "LOCATING") this.state = "SEARCH";
 	}
 
 	search(query) {
 		const opts = {
 			key: config.googleApiKey,
-			location: this.location.coords.latitude + "," + this.location.coords.longitude,
+			location: this.location.latitude + "," + this.location.longitude,
 			rankby: "distance",
 			keyword: query
 		};
@@ -74,26 +78,37 @@ class App {
 	}
 
 	onSearchResult(text) {
+		const parse = item => ({
+			name: item.name,
+			location: {latitude: item.geometry.location.lat, longitude: item.geometry.location.lng},
+			vicinity: item.vicinity,
+			distance: this.printDistance(geolib.getDistance(this.location, item.geometry.location)),
+			bearing: geolib.getBearing(this.location, item.geometry.location),
+			direction: geolib.getCompassDirection(this.location, item.geometry.location).exact
+		});
 		this.searchResult = {
-			items: JSON.parse(text).results.map(item => {
-				return {
-					name: item.name,
-					location: {latitude: item.geometry.location.lat, longitude: item.geometry.location.lng},
-					vicinity: item.vicinity,
-					distance: this.printDistance(geolib.getDistance(this.location.coords, item.geometry.location)),
-					direction: this.printDirection(geolib.getCompassDirection(this.location.coords, item.geometry.location))
-				}
-			}),
+			items: JSON.parse(text).results.map(parse),
 			index: 0
 		};
+		if (this.bearing != null) this.searchResult.items.sort(this.sortByBearing.bind(this));
 		this.state = "SEARCH_RESULT";
+	}
+
+	sortByBearing(a, b) {
+		let alpha = Math.abs(a.bearing-this.bearing);
+		let beta = Math.abs(b.bearing-this.bearing);
+		if (alpha > 180) alpha = 360-alpha;
+		if (beta > 180) beta = 360-beta;
+		if (alpha < beta) return -1;
+		if (alpha > beta) return 1;
+		return 0;
 	}
 
 	select() {
 		const dest = this.searchResult.items[this.searchResult.index].location;
 		const opts = {
 			key: config.googleApiKey,
-			origin: this.location.coords.latitude + "," + this.location.coords.longitude,
+			origin: this.location.latitude + "," + this.location.longitude,
 			destination: dest.latitude + "," + dest.longitude
 		}
 		ajaxGet("https://maps.googleapis.com/maps/api/directions/json", opts, this.onDirectionsResult.bind(this));
@@ -117,8 +132,17 @@ class App {
 		return (d /1000 *5 /8).toFixed(2) + ' mi';
 	}
 	
-	printDirection(d) {
-		return d.exact;
+	printCoords(coords) {
+		if (!coords) return '';
+		return Number(coords.latitude).toFixed(6) + ',' + Number(coords.longitude).toFixed(6);
+	}
+
+	setArrowRotation(elem, myBearing, myLocation, destination) {
+		if (myBearing != null && myLocation && destination) {
+			const placeBearing = geolib.getBearing(myLocation, destination);
+			const angle = placeBearing - myBearing;
+			elem.style.transform = "rotate(" + angle + "deg)";
+		}
 	}
 }
 
